@@ -4,8 +4,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Final
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseSettings, Field
 
 
 class Settings(BaseSettings):
@@ -24,11 +23,10 @@ class Settings(BaseSettings):
         description="Timeout in seconds for outbound HTTP requests.",
     )
 
-    model_config = SettingsConfigDict(
-        env_prefix="CRYPTO_ANALYTICS_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-    )
+    class Config:
+        env_prefix = "CRYPTO_ANALYTICS_"
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 @lru_cache()
