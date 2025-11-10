@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crypto Analytics</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}" />
+  </head>
+  <body>
+    <header>
+      <h1>Crypto Analytics Dashboard</h1>
+      <p>Estadísticas en tiempo (casi) real impulsadas por la API de CoinGecko.</p>
+    </header>
+    <main>
+      <section>
+        <h2>Resumen Global del Mercado</h2>
+        {% set total_market_cap = global_data.get('total_market_cap', {}).get('usd') %}
+        {% set total_volume = global_data.get('total_volume', {}).get('usd') %}
+        {% set dominance_btc = global_data.get('market_cap_percentage', {}).get('btc') %}
+        {% set dominance_eth = global_data.get('market_cap_percentage', {}).get('eth') %}
+        {% set change_24h = global_data.get('market_cap_change_percentage_24h_usd') %}
+        <div class="grid">
+          <div class="card">
+            <h3>Capitalización Total</h3>
+            <p class="stat-value">
+              {% if total_market_cap is not none %}
+              ${{ '{:,.0f}'.format(total_market_cap) }}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+            <p class="stat-delta">
+              Cambio 24h:
+              {% if change_24h is not none %}
+              {{ '%.2f'|format(change_24h) }}%
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+          </div>
+          <div class="card">
+            <h3>Volumen Total</h3>
+            <p class="stat-value">
+              {% if total_volume is not none %}
+              ${{ '{:,.0f}'.format(total_volume) }}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+          </div>
+          <div class="card">
+            <h3>Dominancia BTC</h3>
+            <p class="stat-value">
+              {% if dominance_btc is not none %}
+              {{ '%.2f'|format(dominance_btc) }}%
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+          </div>
+          <div class="card">
+            <h3>Dominancia ETH</h3>
+            <p class="stat-value">
+              {% if dominance_eth is not none %}
+              {{ '%.2f'|format(dominance_eth) }}%
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Top Criptomonedas por Capitalización</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>1h</th>
+              <th>24h</th>
+              <th>7d</th>
+              <th>Capitalización</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for coin in market_overview %}
+            <tr>
+              <td>{{ coin.get('market_cap_rank', '-') }}</td>
+              <td>{{ coin.get('name', 'N/D') }} ({{ coin.get('symbol', '') | upper }})</td>
+              <td>
+                {% if coin.get('current_price') is not none %}
+                ${{ '{:,.2f}'.format(coin.get('current_price')) }}
+                {% else %}
+                N/D
+                {% endif %}
+              </td>
+              <td>{{ '%.2f'|format(coin.get('price_change_percentage_1h_in_currency') or 0) }}%</td>
+              <td>{{ '%.2f'|format(coin.get('price_change_percentage_24h_in_currency') or 0) }}%</td>
+              <td>{{ '%.2f'|format(coin.get('price_change_percentage_7d_in_currency') or 0) }}%</td>
+              <td>
+                {% if coin.get('market_cap') is not none %}
+                ${{ '{:,.0f}'.format(coin.get('market_cap')) }}
+                {% else %}
+                N/D
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Buscar Criptomoneda</h2>
+        <form method="get" action="/">
+          <input type="text" name="coin_id" placeholder="Ej. bitcoin, ethereum, cardano" value="{{ request.query_params.get('coin_id', '') }}" />
+          <button type="submit">Buscar</button>
+        </form>
+        {% if error_message %}
+        <p style="margin-top: 1rem; color: #fca5a5;">{{ error_message }}</p>
+        {% endif %}
+        {% if coin_details %}
+        {% set market_data = coin_details.get('market_data', {}) %}
+        {% set current_price = market_data.get('current_price', {}).get('usd') %}
+        {% set market_cap = market_data.get('market_cap', {}).get('usd') %}
+        {% set ath = market_data.get('ath', {}).get('usd') %}
+        {% set ath_date = market_data.get('ath_date', {}).get('usd') %}
+        {% set atl = market_data.get('atl', {}).get('usd') %}
+        {% set atl_date = market_data.get('atl_date', {}).get('usd') %}
+        <div class="grid" style="margin-top: 1.5rem;">
+          <div class="card" style="grid-column: span 2;">
+            <h3>{{ coin_details.get('name') }} ({{ coin_details.get('symbol', '') | upper }})</h3>
+            <p class="stat-value">
+              Precio actual:
+              {% if current_price is not none %}
+              ${{ '{:,.2f}'.format(current_price) }}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+            <p>
+              Capitalización:
+              {% if market_cap is not none %}
+              ${{ '{:,.0f}'.format(market_cap) }}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+            <p>Ranking de mercado: {{ coin_details.get('market_cap_rank', 'N/D') }}</p>
+            <p>
+              Máximo histórico:
+              {% if ath is not none %}
+              ${{ '{:,.2f}'.format(ath) }}
+              {% if ath_date %}({{ ath_date[:10] }}){% endif %}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+            <p>
+              Mínimo histórico:
+              {% if atl is not none %}
+              ${{ '{:,.2f}'.format(atl) }}
+              {% if atl_date %}({{ atl_date[:10] }}){% endif %}
+              {% else %}
+              No disponible
+              {% endif %}
+            </p>
+          </div>
+          <div class="card">
+            <h3>Descripción</h3>
+            {% set description = coin_details.get('description', {}).get('es') or coin_details.get('description', {}).get('en') %}
+            <p style="font-size: 0.9rem; line-height: 1.6; color: var(--muted-text);">
+              {% if description %}
+              {{ description | striptags | truncate(400, True, '...') }}
+              {% else %}
+              No hay descripción disponible.
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        {% endif %}
+      </section>
+
+      <p class="caption">Data provided by <a href="https://www.geckoterminal.com/es" target="_blank" rel="noopener">CoinGecko</a>.</p>
+    </main>
+  </body>
+</html>
